@@ -22,6 +22,7 @@ public class Runner
         { "Semantic Kernel Prompt.", SemanticKernelPrompt.Run },
         { "Semantic Kernel Chat.", SemanticKernelChat.Run },
         { "Semantic Kernel Memory.", SemanticKernelMemory.Run },
+        { "Semantic Kernel File Chat.", SemanticKernelFileChat.Run },
         { "Coding Assistant.", CodingAssistant.Run },
         { "Batch Decoding.", BatchedDecoding.Run },
         { "SK Kernel Memory.", KernelMemory.Run },

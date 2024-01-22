@@ -34,7 +34,7 @@ public class BatchedDecoding
         using var model = LLamaWeights.LoadFromFile(parameters);
 
         // Tokenize prompt
-        var prompt_tokens = model.NativeHandle.Tokenize(prompt, true, false, Encoding.UTF8);
+        var prompt_tokens = model.Tokenize(prompt, true, false, Encoding.UTF8);
         var n_kv_req = prompt_tokens.Length + (n_len - prompt_tokens.Length) * n_parallel;
 
         // Create a context
@@ -52,20 +52,13 @@ public class BatchedDecoding
             return;
         }
 
-        using var batch = LLamaBatchSafeHandle.Create(Math.Max(prompt_tokens.Length, n_parallel), 0, 1);
+        var batch = new LLamaBatch();
 
         // evaluate the initial prompt
         for (var i = 0; i < prompt_tokens.Length; i++)
-            batch.LLamaBatchAdd(prompt_tokens[i], i, new[] { (LLamaSeqId)0 }, false);
-        Debug.Assert(batch.NativeBatch.n_tokens == prompt_tokens.Length);
+            batch.Add(prompt_tokens[i], i, LLamaSeqId.Zero, i == prompt_tokens.Length - 1);
 
-        // llama_decode will output logits only for the last token of the prompt
-        unsafe
-        {
-            batch.NativeBatch.logits[batch.NativeBatch.n_tokens - 1] = 1;
-        }
-
-        if (context.NativeHandle.Decode(batch) != 0)
+        if (await context.DecodeAsync(batch) != 0)
         {
             await Console.Error.WriteLineAsync("llama_decode failed");
             return;
@@ -75,7 +68,7 @@ public class BatchedDecoding
         // this way, the parallel sequences will "reuse" the prompt tokens without having to copy them
         for (var i = 1; i < n_parallel; ++i)
         {
-            NativeApi.llama_kv_cache_seq_cp(context.NativeHandle, (LLamaSeqId)0, (LLamaSeqId)i, 0, batch.NativeBatch.n_tokens);
+            NativeApi.llama_kv_cache_seq_cp(context.NativeHandle, (LLamaSeqId)0, (LLamaSeqId)i, 0, batch.TokenCount);
         }
 
         if (n_parallel > 1)
@@ -88,14 +81,14 @@ public class BatchedDecoding
         // we need this to determine which logits to sample from
         List<int> i_batch = new();
         for (var i = 0; i < n_parallel; i++)
-            i_batch.Add(batch.NativeBatch.n_tokens - 1);
+            i_batch.Add(batch.TokenCount - 1);
 
-        var n_cur = batch.NativeBatch.n_tokens;
+        var n_cur = batch.TokenCount;
         var n_decode = 0;
 
-        var streams = new List<LLamaToken>[n_parallel];
+        var streams = new StreamingTokenDecoder[n_parallel];
         for (var i = 0; i < n_parallel; i++)
-            streams[i] = new();
+            streams[i] = new StreamingTokenDecoder(context);
 
         var eos = model.EndOfSentenceToken;
         var nl = model.NewlineToken;
@@ -104,7 +97,7 @@ public class BatchedDecoding
         timer.Start();
         while (n_cur <= n_len)
         {
-            batch.LLamaBatchClear();
+            batch.Clear();
 
             for (var i = 0; i < n_parallel; i++)
             {
@@ -133,16 +126,16 @@ public class BatchedDecoding
 
                 streams[i].Add(new_token_id);
 
-                i_batch[i] = batch.NativeBatch.n_tokens;
+                i_batch[i] = batch.TokenCount;
 
                 // push this new token for next evaluation
-                batch.LLamaBatchAdd(new_token_id, n_cur, new[] { (LLamaSeqId)i }, true);
+                batch.Add(new_token_id, n_cur, new[] { (LLamaSeqId)i }, true);
 
                 n_decode++;
             }
 
             // all streams are finished
-            if (batch.NativeBatch.n_tokens == 0)
+            if (batch.TokenCount == 0)
             {
                 break;
             }
@@ -150,7 +143,7 @@ public class BatchedDecoding
             n_cur++;
 
             // evaluate the current batch with the transformer model
-            if (context.NativeHandle.Decode(batch) != 0)
+            if (await context.DecodeAsync(batch) != 0)
             {
                 await Console.Error.WriteLineAsync("failed to eval");
                 return;
@@ -166,7 +159,7 @@ public class BatchedDecoding
         var index = 0;
         foreach (var stream in streams)
         {
-            var text = context.DeTokenize(stream);
+            var text = stream.Read();
 
             Console.ForegroundColor = ConsoleColor.Green;
             Console.Write($"{index++}. {prompt}");

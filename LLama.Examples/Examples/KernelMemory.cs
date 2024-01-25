@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using LLamaSharp.KernelMemory;
 using Microsoft.KernelMemory;
-using Microsoft.KernelMemory.Handlers;
+using Microsoft.KernelMemory.Configuration;
 
 namespace LLama.Examples.Examples
 {

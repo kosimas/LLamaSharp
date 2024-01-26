@@ -1,5 +1,4 @@
-﻿
-using Microsoft.SemanticKernel.Memory;
+﻿using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Plugins.Memory;
 using LLamaSharp.SemanticKernel.TextCompletion;
 using LLamaSharp.SemanticKernel.TextEmbedding;
@@ -122,7 +121,7 @@ namespace LLama.Examples.Examples
         }
 
         private static async Task AskOracale(
-            string question, 
+            string question,
             Kernel kernel,
             KernelFunction oracale)
         {

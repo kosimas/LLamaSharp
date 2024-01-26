@@ -24,7 +24,7 @@ namespace LLama.Examples.Examples
 
             await using var connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync("localhost:6379");
             var database = connectionMultiplexer.GetDatabase();
-            var memoryStore = new RedisMemoryStore(database, vectorSize: 1536);
+            var memoryStore = new RedisMemoryStore(database, vectorSize: 4096);
 
             const uint seed = 1337u;
             var parameters = new ModelParams(modelPath)

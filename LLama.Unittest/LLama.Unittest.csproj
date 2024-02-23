@@ -13,10 +13,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />
-    <PackageReference Include="xunit" Version="2.6.6" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.6">
+    <PackageReference Include="xunit" Version="2.7.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.7">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <Target Name="DownloadContentFiles" BeforeTargets="Build">
-      <DownloadFile SourceUrl="https://huggingface.co/TheBloke/Llama-2-7b-Chat-GGUF/resolve/main/llama-2-7b-chat.Q4_0.gguf" DestinationFolder="Models" DestinationFileName="llama-2-7b-chat.Q4_0.gguf" SkipUnchangedFiles="true">
+      <DownloadFile SourceUrl="https://huggingface.co/TheBloke/Llama-2-7b-Chat-GGUF/resolve/main/llama-2-7b-chat.Q3_K_S.gguf" DestinationFolder="Models" DestinationFileName="llama-2-7b-chat.Q3_K_S.gguf" SkipUnchangedFiles="true">
     </DownloadFile>
   </Target>
 
@@ -41,7 +41,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Models\llama-2-7b-chat.Q4_0.gguf">
+    <None Update="Models\llama-2-7b-chat.Q3_K_S.gguf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

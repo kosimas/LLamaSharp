@@ -1,15 +1,21 @@
 ﻿using LLama.Common;
+using Xunit.Abstractions;
 
 namespace LLama.Unittest;
 
 public sealed class LLamaEmbedderTests
     : IDisposable
 {
+    private readonly ITestOutputHelper _testOutputHelper;
     private readonly LLamaEmbedder _embedder;
 
-    public LLamaEmbedderTests()
+    public LLamaEmbedderTests(ITestOutputHelper testOutputHelper)
     {
-        var @params = new ModelParams(Constants.ModelPath);
+        _testOutputHelper = testOutputHelper;
+        var @params = new ModelParams(Constants.ModelPath)
+        {
+            EmbeddingMode = true,
+        };
         using var weights = LLamaWeights.LoadFromFile(@params);
         _embedder = new(weights, @params);
     }
@@ -19,18 +25,6 @@ public sealed class LLamaEmbedderTests
         _embedder.Dispose();
     }
 
-    private static float Magnitude(float[] a)
-    {
-        return MathF.Sqrt(a.Zip(a, (x, y) => x * y).Sum());
-    }
-
-    private static void Normalize(float[] a)
-    {
-        var mag = Magnitude(a);
-        for (var i = 0; i < a.Length; i++)
-            a[i] /= mag;
-    }
-
     private static float Dot(float[] a, float[] b)
     {
         Assert.Equal(a.Length, b.Length);
@@ -38,21 +32,18 @@ public sealed class LLamaEmbedderTests
     }
 
     [Fact]
-    public void EmbedCompare()
+    public async Task EmbedCompare()
     {
-        var cat = _embedder.GetEmbeddings("cat");
-        var kitten = _embedder.GetEmbeddings("kitten");
-        var spoon = _embedder.GetEmbeddings("spoon");
+        var cat = await _embedder.GetEmbeddings("The cat is cute");
+        var kitten = await _embedder.GetEmbeddings("The kitten is kawaii");
+        var spoon = await _embedder.GetEmbeddings("The spoon is not real");
 
-        Normalize(cat);
-        Normalize(kitten);
-        Normalize(spoon);
+        _testOutputHelper.WriteLine($"Cat    = [{string.Join(",", cat.AsMemory().Slice(0, 7).ToArray())}...]");
+        _testOutputHelper.WriteLine($"Kitten = [{string.Join(",", kitten.AsMemory().Slice(0, 7).ToArray())}...]");
+        _testOutputHelper.WriteLine($"Spoon  = [{string.Join(",", spoon.AsMemory().Slice(0, 7).ToArray())}...]");
 
-        var close = Dot(cat, kitten);
-        var far = Dot(cat, spoon);
-
-        // This comparison seems backwards, but remember that with a
-        // dot product 1.0 means **identical** and 0.0 means **completely opposite**!
-        Assert.True(close > far);
+        var close = 1 - Dot(cat, kitten);
+        var far = 1 - Dot(cat, spoon);
+        Assert.True(close < far);
     }
 }

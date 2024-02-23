@@ -25,6 +25,7 @@ public class Runner
         { "Semantic Kernel File Chat.", SemanticKernelFileChat.Run },
         { "Semantic Kernel File Chat Redis.", SemanticKernelMemoryRedis.Run },
         { "Semantic Kernel File Chat Postgres.", SemanticKernelMemoryPostgres.Run },
+        { "Semantic Kernel Function Calling.", SemanticKernelFunctionCalling.Run },
         { "Coding Assistant.", CodingAssistant.Run },
         { "Batch Decoding.", BatchedDecoding.Run },
         { "SK Kernel Memory.", KernelMemory.Run },

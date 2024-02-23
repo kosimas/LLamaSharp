@@ -14,4 +14,10 @@ public class HistoryTransform : DefaultHistoryTransform
     {
         return base.HistoryToText(history) + $"{AuthorRole.Assistant}: ";
     }
+    
+    public string HistoryToTextFC(global::LLama.Common.ChatHistory history)
+    {
+        // Add {" to the start of the string as an hack for better results.
+        return base.HistoryToText(history) + $"{AuthorRole.FunctionCall}: " + "{\"";
+    }
 }

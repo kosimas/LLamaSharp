@@ -22,11 +22,15 @@ namespace LLama
             private const string defaultAssistantName = "Assistant";
             private const string defaultSystemName = "System";
             private const string defaultUnknownName = "??";
+            private const string defaultFunctionCallName = "function_call";
+            private const string defaultFunctionResultName = "function_result";
 
             private readonly string _userName;
             private readonly string _assistantName;
             private readonly string _systemName;
             private readonly string _unknownName;
+            private readonly string _functionCallName;
+            private readonly string _functionResultName;
             private readonly bool _isInstructMode;
 
             /// <summary>
@@ -36,14 +40,19 @@ namespace LLama
             /// <param name="assistantName"></param>
             /// <param name="systemName"></param>
             /// <param name="unknownName"></param>
+            /// <param name="functionCallName"></param>
+            /// <param name="functionResultName"></param>
             /// <param name="isInstructMode"></param>
-            public DefaultHistoryTransform(string? userName = null, string? assistantName = null, 
-                string? systemName = null, string? unknownName = null, bool isInstructMode = false)
+            public DefaultHistoryTransform(string? userName = null, string? assistantName = null,
+                string? systemName = null, string? unknownName = null, string? functionCallName = null,
+                string? functionResultName = null, bool isInstructMode = false)
             {
                 _userName = userName ?? defaultUserName;
                 _assistantName = assistantName ?? defaultAssistantName;
                 _systemName = systemName ?? defaultSystemName;
                 _unknownName = unknownName ?? defaultUnknownName;
+                _functionCallName = functionCallName ?? defaultFunctionCallName;
+                _functionResultName = functionResultName ?? defaultFunctionResultName;
                 _isInstructMode = isInstructMode;
             }
 
@@ -69,7 +78,16 @@ namespace LLama
                     {
                         sb.AppendLine($"{_assistantName}: {message.Content}");
                     }
+                    else if (message.AuthorRole == AuthorRole.FunctionCall)
+                    {
+                        sb.AppendLine($"{_functionCallName}: {message.Content}");
+                    }
+                    else if (message.AuthorRole == AuthorRole.FunctionResult)
+                    {
+                        sb.AppendLine(@$"{_functionResultName}: {message.Content}");
+                    }
                 }
+
                 return sb.ToString();
             }
 
@@ -97,10 +115,12 @@ namespace LLama
                 {
                     text = text.Substring(0, text.Length - $"{_assistantName}:".Length).TrimEnd();
                 }
+
                 if (_isInstructMode && role == AuthorRole.Assistant && text.EndsWith("\n> "))
                 {
                     text = text.Substring(0, text.Length - "\n> ".Length).TrimEnd();
                 }
+
                 return text;
             }
         }
@@ -149,7 +169,8 @@ namespace LLama
             /// has already exceeded the maximum length of the keywords (8). On the contrary, setting redundancyLengyh &gt;= 2 leads to successful match.
             /// The larger the redundancyLength is, the lower the processing speed. But as an experience, it won't introduce too much performance impact when redundancyLength &lt;= 5 </param>
             /// <param name="removeAllMatchedTokens">If set to true, when getting a matched keyword, all the related tokens will be removed. Otherwise only the part of keyword will be removed.</param>
-            public KeywordTextOutputStreamTransform(IEnumerable<string> keywords, int redundancyLength = 3, bool removeAllMatchedTokens = false)
+            public KeywordTextOutputStreamTransform(IEnumerable<string> keywords, int redundancyLength = 3,
+                bool removeAllMatchedTokens = false)
             {
                 _keywords = new(keywords);
                 _maxKeywordLength = _keywords.Max(x => x.Length) + redundancyLength;
@@ -174,11 +195,13 @@ namespace LLama
                         {
                             window.Dequeue();
                         }
+
                         if (!_removeAllMatchedTokens)
                         {
                             yield return current.Replace(matchedKeyword, "");
                         }
                     }
+
                     if (current.Length >= _maxKeywordLength)
                     {
                         int total = window.Count;
@@ -188,6 +211,7 @@ namespace LLama
                         }
                     }
                 }
+
                 int totalCount = window.Count;
                 for (int i = 0; i < totalCount; i++)
                 {

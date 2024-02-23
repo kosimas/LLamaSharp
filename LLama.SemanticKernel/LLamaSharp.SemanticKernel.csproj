@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>netstandard2.0;net6.0;net7.0</TargetFrameworks>
+		<TargetFrameworks>net6.0;net7.0</TargetFrameworks>
 		<RootNamespace>LLamaSharp.SemanticKernel</RootNamespace>
 		<Nullable>enable</Nullable>
 		<LangVersion>10</LangVersion>
@@ -34,7 +34,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <PackageReference Include="Azure.AI.OpenAI" Version="1.0.0-beta.12" />
 	  <PackageReference Include="Microsoft.SemanticKernel.Abstractions" Version="1.1.0" />
+	  <PackageReference Include="System.Memory.Data" Version="8.0.0" />
 	</ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">

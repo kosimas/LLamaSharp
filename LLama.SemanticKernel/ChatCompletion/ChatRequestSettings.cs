@@ -1,6 +1,7 @@
 ﻿using Microsoft.SemanticKernel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using LLamaSharp.SemanticKernel.Connectors.LLama;
 
 namespace LLamaSharp.SemanticKernel.ChatCompletion;
 
@@ -61,6 +62,11 @@ public class ChatRequestSettings : PromptExecutionSettings
     /// </summary>
     [JsonPropertyName("token_selection_biases")]
     public IDictionary<int, int> TokenSelectionBiases { get; set; } = new Dictionary<int, int>();
+    
+    /// <summary>
+    /// Try to invoke a function call json answers.
+    /// </summary>
+    public bool? AutoInvoke { get; set; }
 
     /// <summary>
     /// Create a new settings object with the values from another settings object.

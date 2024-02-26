@@ -19,8 +19,7 @@ namespace LLama.Examples.Examples
 
         public static async Task Run()
         {
-            Console.Write("Please input your model path: ");
-            var modelPath = Console.ReadLine();
+            var modelPath = UserSettings.GetModelPath();
 
             await using var connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync("localhost:6379");
             var database = connectionMultiplexer.GetDatabase();

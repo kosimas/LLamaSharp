@@ -20,8 +20,7 @@ public class SemanticKernelMemoryPostgres
 
     public static async Task Run()
     {
-        Console.Write("Please input your model path: ");
-        var modelPath = Console.ReadLine();
+        var modelPath = UserSettings.GetModelPath();
 
         NpgsqlDataSourceBuilder dataSourceBuilder = new NpgsqlDataSourceBuilder("Host=localhost;Port=5432;Database=sk_demo;User Id=postgres;Password=mysecretpassword");
         dataSourceBuilder.UseVector();

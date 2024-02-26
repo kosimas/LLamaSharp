@@ -16,8 +16,10 @@ public class SemanticKernelFunctionCalling
 {
     public static async Task Run()
     {
-        Console.Write("Please input your model path: ");
-        var modelPath = Console.ReadLine()!;
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("Use this model: " +
+                          "https://huggingface.co/Trelis/Llama-2-7b-chat-hf-function-calling-v3");
+        var modelPath = UserSettings.GetModelPath();
 
         var parameters = new ModelParams(modelPath);
         var weights = LLamaWeights.LoadFromFile(parameters);

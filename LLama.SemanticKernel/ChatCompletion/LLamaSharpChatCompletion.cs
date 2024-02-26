@@ -147,7 +147,6 @@ public sealed class LLamaSharpChatCompletion : IChatCompletionService
         }
         catch (Exception e)
         {
-            // Console.WriteLine(e);
             Debug.WriteLine(e);
             var lastChatMessage = historyToAppend[^1];
             Debug.WriteLine(lastChatMessage.Content);

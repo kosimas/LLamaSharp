@@ -111,7 +111,7 @@ public sealed class LLamaSharpChatCompletion : IChatCompletionService
 
         // Add {" to the start of the string as an hack for better results.
         var functionCallString = sbFunctionCall.ToString();
-        if (!functionCallString.StartsWith("{")) 
+        if (!functionCallString.StartsWith("{"))
             functionCallString = "{\"" + functionCallString;
 
         var historyToAppend = new List<ChatMessageContent>
@@ -187,15 +187,90 @@ public sealed class LLamaSharpChatCompletion : IChatCompletionService
         var settings = executionSettings != null
             ? ChatRequestSettings.FromRequestSettings(executionSettings)
             : defaultRequestSettings;
-        var prompt = historyTransform.HistoryToText(chatHistory.ToLLamaSharpChatHistory());
 
-        var result = _model.InferAsync(prompt, settings.ToLLamaSharpInferenceParams(), cancellationToken);
+        var autoInvoke = kernel is not null && settings.AutoInvoke == true;
 
-        var output = outputTransform.TransformAsync(result);
-
-        await foreach (var token in output)
+        if (!autoInvoke || kernel is null)
         {
-            yield return new StreamingChatMessageContent(AuthorRole.Assistant, token);
+            var prompt = historyTransform.HistoryToText(chatHistory.ToLLamaSharpChatHistory());
+            var result = _model.InferAsync(prompt, settings.ToLLamaSharpInferenceParams(), cancellationToken);
+            var output = outputTransform.TransformAsync(result);
+
+            await foreach (var token in output)
+            {
+                yield return new StreamingChatMessageContent(AuthorRole.Assistant, token);
+            }
+        }
+        else
+        {
+            var promptFunctionCall =
+                (historyTransform as HistoryTransform)?.HistoryToTextFC(chatHistory.ToLLamaSharpChatHistory())!;
+            var resultFunctionCall =
+                _model.InferAsync(promptFunctionCall, settings.ToLLamaSharpInferenceParams(), cancellationToken);
+            var outputFunctionCall = outputTransform.TransformAsync(resultFunctionCall);
+            var sbFunctionCall = new StringBuilder();
+
+            await foreach (var token in outputFunctionCall)
+            {
+                sbFunctionCall.Append(token);
+            }
+
+            // Add {" to the start of the string as an hack for better results.
+            var functionCallString = sbFunctionCall.ToString();
+            if (!functionCallString.StartsWith("{"))
+                functionCallString = "{\"" + functionCallString;
+
+            var historyToAppend = new List<ChatMessageContent>
+                { new(new AuthorRole("FunctionCall"), functionCallString) };
+
+            IAsyncEnumerable<string> outputFunctionResultOrCatch;
+            try
+            {
+                var parsedJson = JsonSerializer.Deserialize<LLamaFunctionCall>(functionCallString);
+                if (parsedJson == null) throw new NullReferenceException();
+
+                KernelFunction? function;
+                kernel.Plugins.TryGetFunction(pluginName: null, functionName: parsedJson.name, out function);
+                if (function is null) throw new NullReferenceException();
+
+                var arguments = new KernelArguments(parsedJson.arguments);
+
+                var functionResult = await kernel.InvokeAsync(function, arguments, cancellationToken);
+                historyToAppend.Add(new ChatMessageContent(new AuthorRole("FunctionResult"),
+                    functionResult.GetValue<object>().ToString()));
+                chatHistory.AddRange(historyToAppend);
+                var promptFunctionResult = historyTransform.HistoryToText(chatHistory.ToLLamaSharpChatHistory());
+                var resultFunctionResult = _model.InferAsync(promptFunctionResult,
+                    settings.ToLLamaSharpInferenceParams(),
+                    cancellationToken);
+                outputFunctionResultOrCatch = outputTransform.TransformAsync(resultFunctionResult);
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e);
+                var lastChatMessage = historyToAppend[^1];
+                Debug.WriteLine(lastChatMessage.Content);
+                switch (lastChatMessage.Role.ToString())
+                {
+                    case "FunctionCall":
+                    case "function_call":
+                        historyToAppend.Remove(historyToAppend[^1]);
+                        break;
+                    case "FunctionResult":
+                    case "function_result":
+                        historyToAppend.RemoveRange(historyToAppend.Count - 2, 2);
+                        break;
+                }
+
+                var prompt = historyTransform.HistoryToText(chatHistory.ToLLamaSharpChatHistory());
+                var result = _model.InferAsync(prompt, settings.ToLLamaSharpInferenceParams(), cancellationToken);
+                outputFunctionResultOrCatch = outputTransform.TransformAsync(result);
+            }
+
+            await foreach (var token in outputFunctionResultOrCatch)
+            {
+                yield return new StreamingChatMessageContent(AuthorRole.Assistant, token);
+            }
         }
     }
 }

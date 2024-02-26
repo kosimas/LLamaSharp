@@ -62,13 +62,21 @@ public class SemanticKernelFunctionCalling
                 AutoInvoke = true,
             };
 
-            var result = await chatCompletionService.GetChatMessageContentsAsync(
+            var result = chatCompletionService.GetStreamingChatMessageContentsAsync(
                 history,
                 executionSettings: llamaSettings,
                 kernel: kernel);
 
-            var lastMessage = result.Last().Content;
-            Console.WriteLine(lastMessage);
+            Console.Write("Assistant > ");
+            var lastMessage = "";
+            await foreach (var content in result)
+            {
+                Console.Write(content.ToString());
+                lastMessage += content.ToString();
+            }
+
+            // var lastMessage = result.Last().Content;
+            // Console.WriteLine(lastMessage);
 
             Console.WriteLine();
 
